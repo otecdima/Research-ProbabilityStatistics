@@ -1,0 +1,201 @@
+---
+title: "Research_project"
+author: "Kvitoslava Kolodii, Dmytro Batko, Hykavyi Oleh"
+date: "2023-01-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Aim of the project {#aim}
+
+The aim of the research project is to analyze the data about the tips that were given to a certain waiter and test the hypothesis based on the data set with knowledge of P&S and help of R language.
+
+## Data {#data}
+
+The data, which our research is based on was taken from <https://www.kaggle.com/datasets/jsphyg/tipping>. It contains information about the amount of each tip, waiter received over a period of a few months working in one restaurant. In all he recorded 244 tips.
+
+## **Hypothesis to test** {#hypothesis}
+
+After proceeding the data set our team came up with the following hypothesis:
+
+1.  Test either men or women give *higher* tips to our waiter. (see [I Hypothesis testing](#1hypo))
+2.  Test if the smokers give higher tips or not. (see [II Hypothesis testing](#2hypo))
+3.  Test if *tips amounts* are assigned independently on *total bills sizes* or former depends on latter. (see [III Hypothesis testing](#3hypo))
+
+## Descriptive analysis of the data
+
+As one can see the data set consists of several variables such as total bill, tip amount, sex of the tip giver, the day, time and size of the party. But we only use some of them to test our hypothesis.
+
+```{r}
+tips_path <- "tips.csv"
+
+tips_file <- read.csv(file = tips_path)
+tips_file
+```
+
+### Graphs (just to understand our data set with help of visualization)
+
+#### Histograms of first two variables (total bill size and tip amount)
+
+From that we can see that the most frequent bill size is between 10 and 20 dollars and tip is between 2 and 4. From that data we decided to test if there are some dependency between that variables and to be precise, if the tip amount depend on the total bill size. (see [III Hypothesis testing](#3hypo))
+
+```{r}
+hist(tips_file$total_bill,
+    main="Histogram of total bill size (in dollars)",
+    xlab="Total bill",
+    breaks=100, 
+    ylim=c(0, 12))
+
+hist(tips_file$tip,
+    main="Histogram of tip size (in dollars)",
+    xlab="Tip size",
+    breaks=30)
+```
+
+#### The pie charts and histogram
+
+Here we just visualize the other data. After doing that we came up with another two hypothesis. We saw that the male audience is much greater than female one, so we wanted to test if the former gives higher tips (see [I Hypothesis](#1hypo)). Another interesting data the we got was that there are less smokers than not smokers, so we wanted to test if smokers gives higher tips (see [II Hypothesis](#2hypo)).
+
+```{r}
+number_of_female <- length(which(tips_file$sex=="Female"))
+number_of_male <- length(which(tips_file$sex=="Male"))
+cat("Number of Female =", number_of_female)
+cat("\n")
+cat("Number of Male =", number_of_male)
+cat("\n\n")
+
+number_of_smoker <- length(which(tips_file$smoker=="Yes"))
+number_of_nosmoker <- length(which(tips_file$smoker=="No"))
+cat("Number of smokers =", number_of_smoker)
+cat("\n")
+cat("Number of no smokers =", number_of_nosmoker)
+cat("\n\n")
+
+number_of_weekdays <- c(0, 0, 0, 0, 0, 0, 0)
+weekdays <- c("Mon", "Tues", "Wed", "Thur", "Fri", "Sat", "Sun")
+j <- 1
+for (i in weekdays) {
+  number_of_weekdays[j] <- length(which(tips_file$day==i))
+  cat("Number of", i, " =", number_of_weekdays[j])
+  cat("\n")
+  j <- j + 1
+}
+cat("\n")
+
+number_of_dinner_time <- length(which(tips_file$time=="Dinner"))
+number_of_lunch_time <- length(which(tips_file$time=="Lunch"))
+cat("Number of times tip was given during dinner time =", number_of_dinner_time)
+cat("\n")
+cat("Number of times tip was given during lunch time =", number_of_lunch_time)
+```
+
+```{r}
+pie(c(number_of_female, number_of_male), labels = c("Female", "Male"), main="Pie Chart of the Sex of tips giver")
+
+pie(c(number_of_smoker, number_of_nosmoker), labels = c("Smoker", "Not Smoker"), main="Pie Chart of Smoker/Not smoker")
+
+pie(tail(number_of_weekdays, 4), labels = tail(weekdays, 4), main="Pie Chart of WeekDays the tip was given")
+
+hist(tips_file$size,
+    main="Histogram of size of the party",
+    xlab="Size of the party")
+```
+
+## I Hypothesis testing {#1hypo}
+
+To compare the mean values of two populations with unknown variance, we use the t-test.
+
+We want to test whether men and women tip the same amount of money or whether there is a difference in those values:
+
+$$H_0\,: \mu_m = \mu_f \quad \textrm{vs} \quad H_1\,: \mu_m > \mu_f$$
+
+$$H_0\,: \mu_m = \mu_f \quad \textrm{vs} \quad H_1\,: \mu_m \neq \mu_f$$
+
+```{r}
+male_tips <- subset(tips_file, sex == "Male", select = c("tip"))
+female_tips <- subset(tips_file, sex == "Female", select = c("tip"))
+male_tips
+female_tips
+
+t.test(male_tips, female_tips, alternative = "g")
+t.test(male_tips, female_tips)
+```
+
+Should we reject null hypothesis?
+
+In both cases the p-value of the test is more significant than 0.05, which means that deviation from the null hypothesis is not statistically significant, and we won\`t reject the null hypothesis.
+
+This means that it makes no difference whether the tipper is a man or a woman and the average tip amount they give are the almost the same.
+
+## II Hypothesis testing {#2hypo}
+
+To compare the mean values of two populations with unknown variance, we use the t-test.
+
+We want to test whether smokers and not smokers tip the same amount of money or whether there is a difference in those values:
+
+$$H_0\,: \mu_s = \mu_{ns} \quad \textrm{vs} \quad H_1\,: \mu_s > \mu_{ns}$$
+
+$$H_0\,: \mu_s = \mu_{ns} \quad \textrm{vs} \quad H_1\,: \mu_s \neq \mu_{ns}$$
+
+```{r}
+not_smoker_tips <- subset(tips_file, smoker == "No", select = c("tip"))
+smoker_tips <- subset(tips_file, smoker == "Yes", select = c("tip"))
+male_tips
+female_tips
+t.test(smoker_tips, not_smoker_tips, alternative = "g")
+t.test(smoker_tips, not_smoker_tips, alternative = "t")
+```
+
+Should we reject null hypothesis?
+
+Again in both cases the p-value of the test is more significant than 0.05, which means that deviation from the null hypothesis is not statistically significant, and we won\`t reject the null hypothesis.
+
+This means it makes no difference whether the tipper is a smoker or not.
+
+## III Hypothesis testing {#3hypo}
+
+Getting needed information from data set (total bill and tip amount)
+
+```{r}
+total_bill <- tips_file$total_bill
+tip_amount <- tips_file$tip
+
+df <- data.frame(total_bill, tip_amount)
+df
+```
+
+To test if tips amount depends on the total bill size we use linear regression. Below you can see the plot with regression line of best fit and our data. From the first look it seems that our regression line poorly fits our data. In fact, the summary of linear model shows that $r^2$ (coefficient of determination) is $0.4566$ that means that our linear model really poorly fits data and we cannot say that tip amount fully depends on total bill size.
+
+In addition, *Residual standard error* also shows that our model isn't fitting the data very well. In our case that on average our actual values differ from predicted values on $1.022$ Taking into account that F-statistic is very large and p-value is very small, we can reject the null hypothesis (there is no relationship between the dependent variable and the independent variable) and accept the alternative hypothesis that the dependence exists.
+
+```{r}
+linear_model <- lm(tip_amount ~ total_bill)
+plot(total_bill, tip_amount, pch=21, col="red", bg="orange", xlab = "Total bill size", ylab = "Tip amount")
+abline(linear_model, col = "purple", lwd = 2)
+summary(linear_model)
+```
+
+Here we just wanted to show the residual plot that shows how our actual values differ from predicted one (regression line).
+
+```{r}
+linear_model
+tip_amount_hat <- 0.9203+0.1050*total_bill 
+# those numbers were taken from the coefficients of linear model
+
+residual_ <- tip_amount-tip_amount_hat
+
+cbind(total_bill, tip_amount, tip_amount_hat, residual_)
+```
+
+```{r}
+plot(total_bill, residual_,
+     pch=21, col="red", bg="orange",
+     xlab="Total bill size",
+     ylab="Residuals",
+     ylim=c(-4, 11))
+abline(h=0)
+text(51,0,"y = 0",pos=3)
+```
